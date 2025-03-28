@@ -1,0 +1,192 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Comments Analyzer - Judi Online Filter</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8 text-center">YouTube Comments Analyzer - Judi Online Filter</h1>
+        
+        <!-- Form -->
+        <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-6 mb-8">
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="channel">
+                    Nama Channel
+                </label>
+                <input type="text" id="channel" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="video">
+                    Judul Video
+                </label>
+                <input type="text" id="video" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <button onclick="fetchComments()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full">
+                Analisis Komentar Youtube
+            </button>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loading" class="hidden">
+            <div class="flex justify-center items-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+        </div>
+
+        <!-- Video info -->
+        <div id="videoInfo" class="hidden max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6 mb-8">
+            <div class="flex items-center">
+                <img id="videoThumbnail" class="w-24 h-24 object-cover rounded mr-4" src="" alt="Video thumbnail">
+                <div>
+                    <h2 id="videoTitle" class="text-xl font-bold"></h2>
+                    <p id="channelTitle" class="text-gray-600"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div id="statsCards" class="hidden max-w-4xl mx-auto flex justify-center gap-4 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-bold text-gray-700 mb-2">Total Komentar Youtube</h3>
+                <p id="totalComments" class="text-3xl font-bold text-blue-600">0</p>
+            </div>
+            <!-- <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-bold text-gray-700 mb-2">Positif</h3>
+                <p id="positiveComments" class="text-3xl font-bold text-green-600">0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-bold text-gray-700 mb-2">Negatif</h3>
+                <p id="negativeComments" class="text-3xl font-bold text-red-600">0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-bold text-gray-700 mb-2">Netral</h3>
+                <p id="neutralComments" class="text-3xl font-bold text-gray-600">0</p>
+            </div> -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-bold text-gray-700 mb-2">Komentar Judol Terdeteksi 🎰</h3>
+                <p id="judolComments" class="text-3xl font-bold text-red-600">0</p>
+            </div>
+        </div>
+
+        <!-- Filter Notice -->
+        <div id="filterNotice" class="hidden max-w-2xl mx-auto bg-purple-100 border border-purple-400 text-purple-700 px-4 py-3 rounded mb-4">
+            <strong>Filter aktif:</strong> Hanya menampilkan komentar terkait judi online (judol)
+        </div>
+
+        <!-- Comments container -->
+        <div id="comments" class="max-w-2xl mx-auto space-y-4"></div>
+
+        <!-- No judol comments notice -->
+        <div id="noJudolNotice" class="hidden max-w-2xl mx-auto bg-gray-100 border border-gray-400 text-gray-700 px-4 py-3 rounded relative mt-4">
+            Tidak ditemukan komentar terkait judi online pada video ini.
+        </div>
+
+        <!-- Error message -->
+        <div id="error" class="hidden max-w-2xl mx-auto bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-4">
+        </div>
+    </div>
+
+    <script>
+        function fetchComments() {
+            const channel = document.getElementById('channel').value;
+            const video = document.getElementById('video').value;
+            
+            if (!channel || !video) {
+                showError('Mohon isi nama channel dan judul video');
+                return;
+            }
+
+            // Reset and show loading
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('comments').innerHTML = '';
+            document.getElementById('videoInfo').classList.add('hidden');
+            document.getElementById('statsCards').classList.add('hidden');
+            document.getElementById('filterNotice').classList.add('hidden');
+            document.getElementById('noJudolNotice').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+
+            fetch('/get-comments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    channel_name: channel,
+                    video_title: video
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').classList.add('hidden');
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+
+                // Show video info
+                document.getElementById('videoInfo').classList.remove('hidden');
+                document.getElementById('videoThumbnail').src = data.video_info.thumbnail;
+                document.getElementById('videoTitle').textContent = data.video_info.title;
+                document.getElementById('channelTitle').textContent = data.video_info.channel;
+
+                // Show statistics
+                document.getElementById('statsCards').classList.remove('hidden');
+                document.getElementById('totalComments').textContent = data.sentiment_stats.total;
+                // document.getElementById('positiveComments').textContent = data.sentiment_stats.positive;
+                // document.getElementById('negativeComments').textContent = data.sentiment_stats.negative;
+                // document.getElementById('neutralComments').textContent = data.sentiment_stats.neutral;
+                document.getElementById('judolComments').textContent = data.sentiment_stats.judol || 0;
+
+                // Filter comments - only show judol comments
+                const judolComments = data.comments.filter(comment => comment.sentiment === 'judol');
+                
+                // Show filter notice
+                document.getElementById('filterNotice').classList.remove('hidden');
+                
+                // Display filtered comments
+                const commentsContainer = document.getElementById('comments');
+                
+                if (judolComments.length === 0) {
+                    document.getElementById('noJudolNotice').classList.remove('hidden');
+                } else {
+                    judolComments.forEach(comment => {
+                        const commentElement = `
+                            <div class="bg-white rounded-lg shadow-md p-6">
+                                <div class="flex justify-between items-start">
+                                    <div class="font-bold text-lg">${comment.author}</div>
+                                    <div class="text-sm text-gray-500">${comment.published_at}</div>
+                                </div>
+                                <div class="mt-2">${comment.text}</div>
+                                <div class="mt-2 flex justify-between items-center">
+                                    <span class="text-sm text-gray-500">
+                                        ${comment.likes} likes
+                                    </span>
+                                    <span class="text-sm font-medium text-purple-600">
+                                        Judi Online
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                        commentsContainer.innerHTML += commentElement;
+                    });
+                }
+            })
+            .catch(error => {
+                document.getElementById('loading').classList.add('hidden');
+                showError('Terjadi kesalahan saat mengambil data');
+            });
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
